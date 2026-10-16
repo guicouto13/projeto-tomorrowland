@@ -1,5 +1,5 @@
-// Preencha com o objeto firebaseConfig do seu app Web no console do Firebase.
-// Esta configuração é pública. Nunca coloque senha, chave privada ou token aqui.
+// Configuração pública do aplicativo Web do Projeto Tomorrowland.
+// Nunca coloque senha, chave privada ou token neste arquivo.
 window.TOMORROWLAND_FIREBASE_CONFIG = {
   apiKey: "AIzaSyBXdvZ_0KXz5rkTatFY7g3sGiK1237jQtk",
   authDomain: "projeto-tomorrowland-d012d.firebaseapp.com",
