@@ -31,4 +31,3 @@ O botão **Atualizar** no topo verifica o service worker e recarrega a página. 
 5. Publique os arquivos atualizados. Em **Histórico**, crie sua conta com e-mail e senha ou entre em uma conta existente. Use a mesma conta no iPhone e em outros aparelhos.
 
 O app mantém uma cópia local para uso sem internet e tenta sincronizar ao salvar, ao voltar à tela e ao reconectar. A primeira entrada combina os dias locais com os dias da nuvem pela hora da última alteração. Excluir um dia também é sincronizado. Se dois aparelhos alterarem o mesmo dia sem conexão, a última alteração vence; exporte um backup antes de trocas importantes.
-
