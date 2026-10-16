@@ -107,5 +107,4 @@ async function startSync() {
   window.addEventListener("tomorrowland-change", syncNow);
   window.addEventListener("online", syncNow);
   document.addEventListener("visibilitychange", () => { if (!document.hidden) syncNow(); });
-  setInterval(() => { if (!document.hidden) syncNow(); }, 120000);
 }
