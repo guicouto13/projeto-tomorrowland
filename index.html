@@ -227,7 +227,7 @@
         </aside>
         <div class="panel planner-main">
           <div class="day-row"><div><h3>Seu diário</h3><p>Escolha a refeição e toque em salvar quando comer.</p></div><button class="print" type="button" id="print-button">Imprimir / salvar PDF ↗</button></div>
-          <div class="date-controls"><button type="button" id="prev-week" aria-label="Semana anterior">←</button><span>Semana de</span><input type="date" id="date-picker" aria-label="Ir para uma data"><button type="button" id="next-week" aria-label="Próxima semana">→</button></div>
+          <div class="date-controls"><button type="button" id="prev-week" aria-label="Semana anterior">←</button><span>Semana de</span><input type="date" id="date-picker" aria-label="Ir para uma data"><button type="button" id="next-week" aria-label="Próxima semana">→</button><button type="button" id="today-button" aria-label="Voltar para hoje">Hoje</button></div>
           <div class="days" role="group" aria-label="Dia da semana" id="day-tabs"></div>
           <div id="meal-sections"></div>
           <div class="note">As porções de arroz, feijão, macarrão e carnes são dos alimentos <strong>já prontos</strong>. No almoço, escolha frango ou filé mignon; patinho aparece somente na opção de macarrão. Água e bebidas sem açúcar podem acompanhar as refeições.</div>
@@ -319,8 +319,8 @@
     function fromKey(key) { if(!/^\d{4}-\d{2}-\d{2}$/.test(key))return null; const [year,month,day]=key.split("-").map(Number); const date=new Date(year,month-1,day); return toKey(date)===key ? date : null; }
     function mondayOf(date) { const copy=new Date(date.getFullYear(),date.getMonth(),date.getDate()); copy.setDate(copy.getDate()-(copy.getDay()+6)%7); return copy; }
     function shifted(date,daysToAdd) { const copy=new Date(date); copy.setDate(copy.getDate()+daysToAdd); return copy; }
-    const todayKey=toKey(new Date());
-    let activeDate=fromKey(stored.activeDate) ? stored.activeDate : todayKey;
+    const currentDayKey=()=>toKey(new Date());
+    let activeDate=currentDayKey();
     let historyDate=null;
     let lastDeleted=null;
     let activeView="planner";
@@ -400,6 +400,9 @@
     }
     function setView(view) { activeView=view; document.getElementById("planejador").hidden=view==="training"; document.getElementById("corrida").hidden=view!=="training"; document.getElementById("planner-view").hidden=view!=="planner"; document.getElementById("history-view").hidden=view!=="history"; document.getElementById("planner-title").textContent=view==="history"?"Sua história":"O mapa do seu dia"; document.getElementById("food-subtitle").textContent=view==="history"?"Veja suas refeições registradas por data e guarde uma cópia do diário.":"Escolha e salve cada refeição ao longo do dia. Os registros ficam neste aparelho e são sincronizados quando você entra na sua conta."; for(const [name,id] of [["planner","tab-planner"],["history","tab-history"],["training","tab-training"]]){const tab=document.getElementById(id);tab.classList.toggle("active",name===view);tab.setAttribute("aria-current",name===view?"page":"false");} if(view==="history")renderHistory(); const target=document.getElementById(view==="training"?"corrida":"planejador"); if(typeof target.scrollIntoView==="function")target.scrollIntoView({behavior:"smooth",block:"start"}); }
     function refreshPlanner() { renderDays(); renderMeals(); updateSummary(); }
+    function selectToday() { const today=currentDayKey(); if(activeDate===today)return; activeDate=today; persist(); refreshPlanner(); }
+    window.addEventListener("pageshow",selectToday);
+    document.addEventListener("visibilitychange",()=>{if(!document.hidden)selectToday();});
     async function runFoodSearch(group,query) {
       const search=foodSearch[group.id];
       const normalized=value=>String(value).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
@@ -431,15 +434,16 @@
     document.getElementById("tab-history").addEventListener("click",()=>setView("history"));
     document.getElementById("tab-training").addEventListener("click",()=>setView("training"));
     document.getElementById("hero-training").addEventListener("click",()=>setView("training"));
-    document.getElementById("refresh-button").addEventListener("click",async()=>{const button=document.getElementById("refresh-button");button.disabled=true;button.textContent="↻ Atualizando...";try{if("serviceWorker" in navigator){const registration=await navigator.serviceWorker.getRegistration();if(registration)await registration.update();}}catch{}location.reload();});
+    document.getElementById("refresh-button").addEventListener("click",async()=>{const button=document.getElementById("refresh-button");button.disabled=true;button.textContent="↻ Atualizando...";try{if("serviceWorker" in navigator){const registration=await navigator.serviceWorker.getRegistration();if(registration)await registration.update();}}catch{}const url=new URL(location.href);url.searchParams.set("atualizar",String(Date.now()));location.replace(url.href);});
     document.getElementById("day-tabs").addEventListener("click",event=>{const button=event.target.closest("button[data-date]");if(!button)return;activeDate=button.dataset.date;persist();refreshPlanner();});
     document.getElementById("date-picker").addEventListener("change",event=>{if(!fromKey(event.target.value))return;activeDate=event.target.value;persist();refreshPlanner();});
+    document.getElementById("today-button").addEventListener("click",selectToday);
     document.getElementById("prev-week").addEventListener("click",()=>{activeDate=toKey(shifted(fromKey(activeDate),-7));persist();refreshPlanner();});
     document.getElementById("next-week").addEventListener("click",()=>{activeDate=toKey(shifted(fromKey(activeDate),7));persist();refreshPlanner();});
     document.getElementById("history-list").addEventListener("click",event=>{const button=event.target.closest("button[data-history]");if(!button)return;historyDate=button.dataset.history;renderHistory();});
     document.getElementById("history-detail").addEventListener("click",event=>{const button=event.target.closest("button#delete-day");if(!button||!historyDate||!records[historyDate]||summaryFor(historyDate).count===0)return;const key=historyDate,label=fromKey(key).toLocaleDateString("pt-BR");if(!window.confirm(`Excluir todas as refeições salvas de ${label}? O plano de corrida não será alterado.`))return;lastDeleted={key,record:JSON.parse(JSON.stringify(records[key]))};delete records[key];historyDate=null;changedDay(key);document.getElementById("undo-message").textContent=`Dia ${label} excluído do histórico.`;document.getElementById("undo-delete").hidden=false;renderHistory();refreshPlanner();});
     document.getElementById("undo-button").addEventListener("click",()=>{if(!lastDeleted)return;const {key,record}=lastDeleted;const current=records[key];if(current&&current.meals){for(const group of groups){const newer=current.meals[group.id];if(newer&&newer.saved)record.meals[group.id]=newer;}}records[key]=record;lastDeleted=null;document.getElementById("undo-delete").hidden=true;historyDate=key;changedDay(key);renderHistory();refreshPlanner();});
-    document.getElementById("export-backup").addEventListener("click",()=>{const data={format:"projeto-tomorrowland-backup",version:1,exportedAt:new Date().toISOString(),records,runs:runSessions};const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const link=document.createElement("a");link.href=url;link.download=`projeto-tomorrowland-${todayKey}.json`;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);});
+    document.getElementById("export-backup").addEventListener("click",()=>{const data={format:"projeto-tomorrowland-backup",version:1,exportedAt:new Date().toISOString(),records,runs:runSessions};const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const link=document.createElement("a");link.href=url;link.download=`projeto-tomorrowland-${currentDayKey()}.json`;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);});
     document.getElementById("import-backup").addEventListener("click",()=>document.getElementById("backup-file").click());
     document.getElementById("backup-file").addEventListener("change",async event=>{
       const file=event.target.files&&event.target.files[0];event.target.value="";if(!file)return;
