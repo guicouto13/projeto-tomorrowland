@@ -20,7 +20,7 @@ O backup é um arquivo JSON contendo seu diário alimentar e as sessões de corr
 
 O modo offline começa a funcionar depois da primeira visita online. Ao publicar uma versão nova, atualize o nome do cache em `sw.js` para forçar a atualização dos arquivos no app instalado.
 
-O botão **Atualizar** no topo verifica o service worker e recarrega a página. As abas **Alimentação**, **Histórico** e **Treino** ficam fixas no rodapé.
+O botão **Atualizar** no topo verifica o service worker e abre uma cópia nova da página. Ao abrir ou voltar ao app, a data selecionada retorna ao dia atual; o botão **Hoje** permite fazer isso manualmente. As abas **Alimentação**, **Histórico** e **Treino** ficam fixas no rodapé.
 
 ## Busca de alimentos por gramas
 
