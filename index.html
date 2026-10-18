@@ -115,10 +115,11 @@
     .food-builder button { padding:9px 12px; border:1px solid var(--gold); border-radius:8px; background:rgba(239,210,149,.1); color:var(--gold); font-size:12px; font-weight:800; }
     .food-builder button:hover { background:rgba(239,210,149,.2); }
     .food-results,.food-picked { display:grid; gap:7px; margin:10px 0; }
-    .food-result,.food-picked-item { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:9px; border:1px solid var(--line); border-radius:8px; font-size:12px; }
+    .food-result,.food-picked-item { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; padding:9px; border:1px solid var(--line); border-radius:8px; font-size:12px; }
     .food-result span,.food-picked-item span { min-width:0; overflow-wrap:anywhere; }
     .food-result small,.food-picked-item small { display:block; color:var(--muted); margin-top:3px; }
     .food-picked-item input { width:77px; }
+    .food-picked-item label { font-size:0; }
     .food-picked-item button { border-color:var(--line); color:var(--rose); }
     .food-subtotal { color:var(--gold); font-size:13px; font-weight:800; }
     .food-feedback { color:var(--muted); font-size:12px; line-height:1.45; }
@@ -317,6 +318,8 @@
       {id:"milk-skim",name:"Leite desnatado",kcal100:35,protein100:3.4}
     ];
     const foodSearch = Object.fromEntries(groups.map(group=>[group.id,{query:"",results:[],loading:false,message:""}]));
+    const remoteFoodCache=new Map();
+    let remoteFoodRequests=[];
     const validFood = food => food && typeof food.name==="string" && food.name.trim().length>0 && Number.isFinite(Number(food.kcal100)) && Number(food.kcal100)>=0 && Number(food.kcal100)<=900 && Number.isFinite(Number(food.protein100)) && Number(food.protein100)>=0 && Number(food.protein100)<=100 && Number.isFinite(Number(food.grams)) && Number(food.grams)>=1 && Number(food.grams)<=2000;
     const cleanFood = food => ({key:String(food.key||`${Date.now()}-${Math.random()}`).slice(0,80),name:String(food.name).trim().slice(0,100),kcal100:Number(food.kcal100),protein100:Number(food.protein100),grams:Number(food.grams),source:String(food.source||"manual").slice(0,30)});
     const foodTotals = foods => (foods||[]).filter(validFood).reduce((total,food)=>({kcal:total.kcal+Number(food.kcal100)*Number(food.grams)/100,protein:total.protein+Number(food.protein100)*Number(food.grams)/100}),{kcal:0,protein:0});
@@ -422,18 +425,26 @@
       try {
         const url=new URL("https://world.openfoodfacts.org/cgi/search.pl");
         for(const [key,value] of Object.entries({search_terms:query,search_simple:"1",action:"process",json:"1",page_size:"20",fields:"code,product_name,product_name_pt,brands,nutriments"}))url.searchParams.set(key,value);
-        const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),10000);
-        let response;
-        try { response=await fetch(url,{signal:controller.signal,credentials:"omit"}); } finally { clearTimeout(timeout); }
-        if(!response.ok)throw new Error(`HTTP ${response.status}`);
-        const data=await response.json();
-        const products=Array.isArray(data.products)?data.products:[];
-        const found=products.map(product=>{
+        const cacheKey=normalized(query);
+        let found=remoteFoodCache.get(cacheKey);
+        if(!found){
+          remoteFoodRequests=remoteFoodRequests.filter(time=>Date.now()-time<60_000);
+          if(remoteFoodRequests.length>=8){search.message="Aguarde um minuto para outra busca online. As referências locais e o cadastro manual continuam disponíveis.";return;}
+          remoteFoodRequests.push(Date.now());
+          const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),10000);
+          let response;
+          try { response=await fetch(url,{signal:controller.signal,credentials:"omit"}); } finally { clearTimeout(timeout); }
+          if(!response.ok)throw new Error(`HTTP ${response.status}`);
+          const data=await response.json();
+          const products=Array.isArray(data.products)?data.products:[];
+          found=products.map(product=>{
           const kcal=Number(product.nutriments?.["energy-kcal_100g"] ?? Number(product.nutriments?.["energy-kj_100g"])/4.184);
           const protein=Number(product.nutriments?.proteins_100g);
           const name=String(product.product_name_pt||product.product_name||"").trim();
           return {id:String(product.code||""),name:[name,product.brands].filter(Boolean).join(" · ").slice(0,100),kcal100:kcal,protein100:protein,source:"Open Food Facts"};
-        }).filter(product=>validFood({...product,grams:100}));
+          }).filter(product=>validFood({...product,grams:100}));
+          remoteFoodCache.set(cacheKey,found);
+        }
         if(search.query!==query)return;
         const used=new Set(search.results.map(food=>normalized(food.name)));
         search.results.push(...found.filter(food=>{const key=normalized(food.name);if(used.has(key))return false;used.add(key);return true;}).slice(0,15));
