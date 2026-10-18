@@ -5,7 +5,7 @@ Este diretório contém um aplicativo web instalável (PWA). Não precisa de ser
 ## Publicar gratuitamente no GitHub Pages
 
 1. Crie um **repositório público** no GitHub, por exemplo `projeto-tomorrowland`.
-2. Envie **os arquivos desta pasta** para a raiz do repositório: `index.html`, `manifest.webmanifest`, `sw.js`, `firebase-config.js`, `sync.js`, `firestore.rules`, os três PNGs e `.nojekyll`. O `README.md` também pode ir.
+2. Envie **os arquivos desta pasta** para a raiz do repositório: `index.html`, `foods-taco.json`, `manifest.webmanifest`, `sw.js`, `firebase-config.js`, `sync.js`, `firestore.rules`, os três PNGs e `.nojekyll`. O `README.md` também pode ir.
 3. No repositório, abra **Settings → Pages**. Em **Build and deployment**, escolha **Deploy from a branch**, selecione `main` e `/(root)`, e salve.
 4. Aguarde a publicação. O endereço terá o formato `https://SEU_USUARIO.github.io/projeto-tomorrowland/`.
 5. Abra esse endereço no Safari do iPhone, toque em **Compartilhar → Adicionar à Tela de Início** e ative **Abrir como App**.
@@ -21,6 +21,10 @@ O backup é um arquivo JSON contendo seu diário alimentar e as sessões de corr
 O modo offline começa a funcionar depois da primeira visita online. Ao publicar uma versão nova, atualize o nome do cache em `sw.js` para forçar a atualização dos arquivos no app instalado.
 
 O botão **Atualizar** no topo verifica o service worker e recarrega a página. As abas **Alimentação**, **Histórico** e **Treino** ficam fixas no rodapé.
+
+## Busca de alimentos por gramas
+
+A opção **Montar com alimentos** aparece em cada refeição. Pesquise na tabela TACO, adicione um ou mais alimentos, ajuste os gramas e salve. O subtotal usa energia e proteína por 100 g da [Tabela Brasileira de Composição de Alimentos (TACO), 4ª edição, NEPA/UNICAMP](https://nepa.unicamp.br/publicacoes/). A tabela local inclui 597 alimentos e funciona offline depois de o app carregar seus arquivos. Marcas e itens ausentes podem ser cadastrados manualmente pelos valores do rótulo.
 
 ## Sincronização privada entre aparelhos
 
