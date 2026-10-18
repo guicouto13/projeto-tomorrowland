@@ -423,8 +423,8 @@
       search.results=commonFoods.filter(food=>normalized(food.name).includes(normalized(query))).map(food=>({...food,source:"Referência do app"}));
       renderMeals();
       try {
-        const url=new URL("https://world.openfoodfacts.org/cgi/search.pl");
-        for(const [key,value] of Object.entries({search_terms:query,search_simple:"1",action:"process",json:"1",page_size:"20",fields:"code,product_name,product_name_pt,brands,nutriments"}))url.searchParams.set(key,value);
+        const url=new URL("https://search.openfoodfacts.org/search");
+        for(const [key,value] of Object.entries({q:query,langs:"pt",page_size:"20",fields:"code,product_name,brands,nutriments"}))url.searchParams.set(key,value);
         const cacheKey=normalized(query);
         let found=remoteFoodCache.get(cacheKey);
         if(!found){
@@ -436,12 +436,13 @@
           try { response=await fetch(url,{signal:controller.signal,credentials:"omit"}); } finally { clearTimeout(timeout); }
           if(!response.ok)throw new Error(`HTTP ${response.status}`);
           const data=await response.json();
-          const products=Array.isArray(data.products)?data.products:[];
+          const products=Array.isArray(data.hits)?data.hits:[];
           found=products.map(product=>{
           const kcal=Number(product.nutriments?.["energy-kcal_100g"] ?? Number(product.nutriments?.["energy-kj_100g"])/4.184);
           const protein=Number(product.nutriments?.proteins_100g);
-          const name=String(product.product_name_pt||product.product_name||"").trim();
-          return {id:String(product.code||""),name:[name,product.brands].filter(Boolean).join(" · ").slice(0,100),kcal100:kcal,protein100:protein,source:"Open Food Facts"};
+          const name=String(product.product_name||"").trim();
+          const brands=Array.isArray(product.brands)?product.brands.join(", "):String(product.brands||"");
+          return {id:String(product.code||""),name:[name,brands].filter(Boolean).join(" · ").slice(0,100),kcal100:kcal,protein100:protein,source:"Open Food Facts"};
           }).filter(product=>validFood({...product,grams:100}));
           remoteFoodCache.set(cacheKey,found);
         }
