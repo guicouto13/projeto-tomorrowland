@@ -1,4 +1,4 @@
-const CACHE_NAME = "projeto-tomorrowland-v3";
+const CACHE_NAME = "projeto-tomorrowland-v4";
 const CORE_FILES = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png", "./firebase-config.js", "./sync.js"];
 
 self.addEventListener("install", event => {
