@@ -1,5 +1,5 @@
-const CACHE_NAME = "projeto-tomorrowland-v4";
-const CORE_FILES = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png", "./firebase-config.js", "./sync.js"];
+const CACHE_NAME = "projeto-tomorrowland-v5";
+const CORE_FILES = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png", "./firebase-config.js", "./sync.js", "./foods-taco.json"];
 
 self.addEventListener("install", event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(CORE_FILES)).then(() => self.skipWaiting()));
