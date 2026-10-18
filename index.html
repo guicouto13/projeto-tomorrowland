@@ -304,22 +304,8 @@
       {id:"rice",name:"100 g de arroz",kcal:131,protein:3},
       {id:"bread",name:"Pão francês",kcal:140,protein:5}
     ];
-    const commonFoods = [
-      {id:"rice-cooked",name:"Arroz branco cozido",kcal100:131,protein100:2.5},
-      {id:"beans-cooked",name:"Feijão cozido",kcal100:76,protein100:4.8},
-      {id:"chicken-cooked",name:"Peito de frango grelhado",kcal100:165,protein100:31},
-      {id:"pasta-cooked",name:"Macarrão cozido",kcal100:158,protein100:5.8},
-      {id:"banana-raw",name:"Banana",kcal100:89,protein100:1.1},
-      {id:"apple-raw",name:"Maçã",kcal100:52,protein100:0.3},
-      {id:"grapes-raw",name:"Uva",kcal100:69,protein100:0.7},
-      {id:"papaya-raw",name:"Mamão",kcal100:43,protein100:0.5},
-      {id:"mango-raw",name:"Manga",kcal100:60,protein100:0.8},
-      {id:"egg-boiled",name:"Ovo cozido",kcal100:155,protein100:13},
-      {id:"milk-skim",name:"Leite desnatado",kcal100:35,protein100:3.4}
-    ];
     const foodSearch = Object.fromEntries(groups.map(group=>[group.id,{query:"",results:[],loading:false,message:""}]));
-    const remoteFoodCache=new Map();
-    let remoteFoodRequests=[];
+    let tacoFoods=null;
     const validFood = food => food && typeof food.name==="string" && food.name.trim().length>0 && Number.isFinite(Number(food.kcal100)) && Number(food.kcal100)>=0 && Number(food.kcal100)<=900 && Number.isFinite(Number(food.protein100)) && Number(food.protein100)>=0 && Number(food.protein100)<=100 && Number.isFinite(Number(food.grams)) && Number(food.grams)>=1 && Number(food.grams)<=2000;
     const cleanFood = food => ({key:String(food.key||`${Date.now()}-${Math.random()}`).slice(0,80),name:String(food.name).trim().slice(0,100),kcal100:Number(food.kcal100),protein100:Number(food.protein100),grams:Number(food.grams),source:String(food.source||"manual").slice(0,30)});
     const foodTotals = foods => (foods||[]).filter(validFood).reduce((total,food)=>({kcal:total.kcal+Number(food.kcal100)*Number(food.grams)/100,protein:total.protein+Number(food.protein100)*Number(food.grams)/100}),{kcal:0,protein:0});
@@ -368,7 +354,7 @@
       const totals=foodTotals(foods);
       const results=search.results.map((food,index)=>`<div class="food-result"><span><strong>${escapeHtml(food.name)}</strong><small>${Math.round(food.kcal100)} kcal · ${Number(food.protein100).toLocaleString("pt-BR",{maximumFractionDigits:1})} g proteína / 100 g · ${escapeHtml(food.source)}</small></span><button type="button" data-add-food="${group.id}" data-food-index="${index}">Adicionar 100 g</button></div>`).join("");
       const picked=foods.map(food=>`<div class="food-picked-item"><span><strong>${escapeHtml(food.name)}</strong><small>${Math.round(food.kcal100*food.grams/100)} kcal · ${Number(food.protein100*food.grams/100).toLocaleString("pt-BR",{maximumFractionDigits:1})} g proteína</small></span><label>${escapeHtml(food.name)} em gramas <input type="number" inputmode="decimal" min="1" max="2000" step="1" value="${food.grams}" data-food-grams="${group.id}" data-food-key="${escapeHtml(food.key)}" aria-label="Gramas de ${escapeHtml(food.name)}"></label><button type="button" data-remove-food="${group.id}" data-food-key="${escapeHtml(food.key)}" aria-label="Remover ${escapeHtml(food.name)}">Remover</button></div>`).join("");
-      return `<div class="food-builder"><h4>Monte esta refeição</h4><p>Busque pelo nome e adicione os alimentos. Confira se a informação é do produto pronto ou cru. A busca online usa a base comunitária <a href="https://world.openfoodfacts.org/" target="_blank" rel="noopener noreferrer">Open Food Facts</a>; os valores são estimativas.</p><form data-food-search="${group.id}" class="food-search-row"><input name="query" type="search" maxlength="80" required minlength="2" value="${escapeHtml(search.query)}" placeholder="Ex.: arroz, whey DUX..." aria-label="Buscar alimento"><button type="submit" ${search.loading?"disabled":""}>${search.loading?"Buscando...":"Buscar"}</button></form><div class="food-feedback ${search.message.startsWith("Não foi")?"error":""}" role="status">${escapeHtml(search.message)}</div><div class="food-results">${results}</div><p>Não encontrou? Use as calorias e proteínas por 100 g do rótulo ou de uma tabela nutricional.</p><form data-food-manual="${group.id}" class="food-manual-row"><input name="name" type="text" maxlength="100" required placeholder="Nome do alimento" aria-label="Nome do alimento"><input name="kcal100" type="number" inputmode="decimal" min="0" max="900" step="0.1" required placeholder="kcal/100 g" aria-label="Calorias por 100 gramas"><input name="protein100" type="number" inputmode="decimal" min="0" max="100" step="0.1" required placeholder="Proteína/100 g" aria-label="Proteína por 100 gramas"><input name="grams" type="number" inputmode="decimal" min="1" max="2000" step="1" required placeholder="Gramas" aria-label="Quantidade em gramas"><button type="submit">Adicionar</button></form><div class="food-picked">${picked||'<p>Nenhum alimento adicionado ainda.</p>'}</div><div class="food-subtotal">Total desta refeição: <span data-food-total="${group.id}">${Math.round(totals.kcal)} kcal · ${totals.protein.toLocaleString("pt-BR",{maximumFractionDigits:1})} g proteína</span></div></div>`;
+      return `<div class="food-builder"><h4>Monte esta refeição</h4><p>Busque pelo nome e adicione os alimentos. Confira se a informação é do produto pronto ou cru. A busca usa a <a href="https://nepa.unicamp.br/publicacoes/" target="_blank" rel="noopener noreferrer">Tabela TACO da UNICAMP</a> e funciona também offline. Valores por 100 g são estimativas.</p><form data-food-search="${group.id}" class="food-search-row"><input name="query" type="search" maxlength="80" required minlength="2" value="${escapeHtml(search.query)}" placeholder="Ex.: arroz, whey DUX..." aria-label="Buscar alimento"><button type="submit" ${search.loading?"disabled":""}>${search.loading?"Buscando...":"Buscar"}</button></form><div class="food-feedback ${search.message.startsWith("Não foi")?"error":""}" role="status">${escapeHtml(search.message)}</div><div class="food-results">${results}</div><p>Não encontrou? Use as calorias e proteínas por 100 g do rótulo ou de uma tabela nutricional.</p><form data-food-manual="${group.id}" class="food-manual-row"><input name="name" type="text" maxlength="100" required placeholder="Nome do alimento" aria-label="Nome do alimento"><input name="kcal100" type="number" inputmode="decimal" min="0" max="900" step="0.1" required placeholder="kcal/100 g" aria-label="Calorias por 100 gramas"><input name="protein100" type="number" inputmode="decimal" min="0" max="100" step="0.1" required placeholder="Proteína/100 g" aria-label="Proteína por 100 gramas"><input name="grams" type="number" inputmode="decimal" min="1" max="2000" step="1" required placeholder="Gramas" aria-label="Quantidade em gramas"><button type="submit">Adicionar</button></form><div class="food-picked">${picked||'<p>Nenhum alimento adicionado ainda.</p>'}</div><div class="food-subtotal">Total desta refeição: <span data-food-total="${group.id}">${Math.round(totals.kcal)} kcal · ${totals.protein.toLocaleString("pt-BR",{maximumFractionDigits:1})} g proteína</span></div></div>`;
     }
     function renderMeals() {
       document.getElementById("meal-sections").innerHTML=groups.map(group=>{
@@ -419,40 +405,26 @@
       const normalized=value=>String(value).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
       search.query=query;
       search.loading=true;
-      search.message="Buscando alimentos...";
-      search.results=commonFoods.filter(food=>normalized(food.name).includes(normalized(query))).map(food=>({...food,source:"Referência do app"}));
+      search.message="Buscando na TACO...";
+      search.results=[];
       renderMeals();
       try {
-        const url=new URL("https://search.openfoodfacts.org/search");
-        for(const [key,value] of Object.entries({q:query,langs:"pt",page_size:"20",fields:"code,product_name,brands,nutriments"}))url.searchParams.set(key,value);
-        const cacheKey=normalized(query);
-        let found=remoteFoodCache.get(cacheKey);
-        if(!found){
-          remoteFoodRequests=remoteFoodRequests.filter(time=>Date.now()-time<60_000);
-          if(remoteFoodRequests.length>=8){search.message="Aguarde um minuto para outra busca online. As referências locais e o cadastro manual continuam disponíveis.";return;}
-          remoteFoodRequests.push(Date.now());
-          const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),10000);
-          let response;
-          try { response=await fetch(url,{signal:controller.signal,credentials:"omit"}); } finally { clearTimeout(timeout); }
-          if(!response.ok)throw new Error(`HTTP ${response.status}`);
+        if(!tacoFoods){
+          const response=await fetch("./foods-taco.json");
+          if(!response.ok)throw new Error("Tabela indisponível");
           const data=await response.json();
-          const products=Array.isArray(data.hits)?data.hits:[];
-          found=products.map(product=>{
-          const kcal=Number(product.nutriments?.["energy-kcal_100g"] ?? Number(product.nutriments?.["energy-kj_100g"])/4.184);
-          const protein=Number(product.nutriments?.proteins_100g);
-          const name=String(product.product_name||"").trim();
-          const brands=Array.isArray(product.brands)?product.brands.join(", "):String(product.brands||"");
-          return {id:String(product.code||""),name:[name,brands].filter(Boolean).join(" · ").slice(0,100),kcal100:kcal,protein100:protein,source:"Open Food Facts"};
-          }).filter(product=>validFood({...product,grams:100}));
-          remoteFoodCache.set(cacheKey,found);
+          if(!Array.isArray(data.foods))throw new Error("Tabela inválida");
+          tacoFoods=data.foods.map(([name,kcal100,protein100],index)=>({id:String(index+1),name,kcal100,protein100,source:"TACO"})).filter(food=>validFood({...food,grams:100}));
         }
         if(search.query!==query)return;
-        const used=new Set(search.results.map(food=>normalized(food.name)));
-        search.results.push(...found.filter(food=>{const key=normalized(food.name);if(used.has(key))return false;used.add(key);return true;}).slice(0,15));
-        search.message=search.results.length?`${search.results.length} alimento(s) encontrado(s). Confira o rótulo antes de salvar.`:"Nenhum resultado com calorias e proteínas por 100 g. Cadastre manualmente abaixo.";
+        const terms=normalized(query).split(/\s+/).filter(Boolean);
+        const found=tacoFoods.filter(food=>terms.every(term=>normalized(food.name).includes(term)));
+        found.sort((a,b)=>Number(normalized(b.name).startsWith(normalized(query)))-Number(normalized(a.name).startsWith(normalized(query))));
+        search.results=found.slice(0,30);
+        search.message=found.length?`${found.length} alimento(s) encontrado(s) na TACO${found.length>30?" · mostrando os 30 primeiros":""}. Confira se está cru ou pronto.`:"Nenhum alimento encontrado na TACO. Cadastre o item pelo rótulo abaixo.";
       } catch {
         if(search.query!==query)return;
-        search.message=search.results.length?"Busca online indisponível. Mostrando referências do app; você também pode cadastrar manualmente.":"Não foi possível buscar agora. Cadastre manualmente com os dados do rótulo.";
+        search.message="Não foi possível carregar a tabela agora. Use o cadastro pelo rótulo abaixo.";
       } finally { if(search.query===query){search.loading=false;renderMeals();} }
     }
     document.getElementById("tab-planner").addEventListener("click",()=>setView("planner"));
